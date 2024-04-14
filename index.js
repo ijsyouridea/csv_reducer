@@ -35,16 +35,20 @@ app.get("/getFile", async (req, res) => {
     res.status(400).send("url is required");
     return;
   }
-  const newData = await getNewData(url);
-  diff = generateDiff(previousData, newData);
-  // diff = newData[1][45];
-  previousData = newData;
-  //save new data to file
-  const [headers, rows] = newData;
-  const csv = `${headers.join(",")}\n${rows.join("\n")}`;
-  fs.writeFileSync("data.csv", csv);
+  try {
+    const newData = await getNewData(url);
+    diff = generateDiff(previousData, newData);
+    // diff = newData[1][45];
+    previousData = newData;
+    //save new data to file
+    const [headers, rows] = newData;
+    const csv = `${headers.join(",")}\n${rows.join("\n")}`;
+    fs.writeFileSync("data.csv", csv);
 
-  res.send(`got new data, for update only ${diff.length} rows are different`);
+    res.send(`got new data, for update only ${diff.length} rows are different`);
+  } catch (e) {
+    res.json(e);
+  }
 });
 
 function generateDiff(previousData, newData) {
