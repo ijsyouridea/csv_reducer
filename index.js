@@ -16,7 +16,7 @@ fs.readFile("data.csv", "utf8", (err, data) => {
     return;
   }
   const csv = data.split("\n");
-  previousData = [csv[0].split(","), csv.slice(1)];
+  previousData = [csv[0].split(";"), csv.slice(1)];
   console.log("data loaded from file");
 });
 let diff = []; //array of rows that are different from previous call
@@ -25,7 +25,7 @@ const updateTriggerKeys = ["price", "stock", "price_catalog"];
 
 app.get("/", (req, res) => {
   let [headers, rows] = previousData;
-  res.send(`hi i have ${rows?.length} rows with ${headers?.length} columns`);
+  res.send(`hi i have ${diff?.length} rows with ${headers?.length} columns`);
 });
 ///getFile?url=https://onninen.pl/feed/csv?token=8e8a70c1-025f-49a3-8061-77f0e86637e8&scope=1
 app.get("/getFile", async (req, res) => {
@@ -50,8 +50,8 @@ app.get("/getFile", async (req, res) => {
 function generateDiff(previousData, newData) {
   let [headers, rows] = newData;
   let [prevHeaders, prevRows] = previousData;
-  rows = rows.map((row) => row.split(","));
-  prevRows = prevRows.map((row) => row.split(","));
+  rows = rows.map((row) => row.split(";"));
+  prevRows = prevRows.map((row) => row.split(";"));
   const diff = [];
   const newHeaderIndexes = importantKeys.map((key) => headers.indexOf(key));
   const prevHeaderIndexes = importantKeys.map((key) =>
@@ -110,7 +110,7 @@ function getNewData(url) {
       .then((response) => {
         const csvData = response.data;
         const lines = csvData.split("\n");
-        const headers = lines.shift().split(",");
+        const headers = lines.shift().split(";");
         // lines.forEach(line => {
         //     const [id, stock] = line.split(',');
         //     data[id] = parseInt(stock);
