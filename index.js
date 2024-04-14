@@ -8,8 +8,10 @@ const axios = require("axios");
 const app = express();
 const port = 3000;
 
-let previousData = []; //array of rows from csv file
+let previousData = [['id','stock'],[]]; //array of rows from csv file
 let diff = []; //array of rows that are different from previous call
+const importantKeys = ['id', 'catalogindex','ean']
+const updateTriggerKeys = ['price', 'stock', 'price_catalog']
 
 app.get("/", (req, res) => {
 	let [headers, rows] = previousData;
@@ -24,27 +26,43 @@ app.get("/getFile", async (req, res) => {
 		return;
 	}
 	const newData = await getNewData(url);
-   // diff = await generateDiff(previousData, newData);
-    diff = newData[1][45];
+    diff = generateDiff(previousData, newData);
+    // diff = newData[1][45];
 	previousData = newData;
 	res.send(`got new data, for update only ${diff.length} rows are different`);
 });
 
 function generateDiff(previousData, newData) {
-    const [headers, rows] = newData;
-    const [prevHeaders, prevRows] = previousData;
+    let [headers, rows] = newData;
+    let [prevHeaders, prevRows] = previousData;
+    rows = rows.map(row=>row.split(','))
+    prevRows = prevRows.map(row=>row.split(','))
     const diff = [];
-    const prevData = prevRows.reduce((acc, row) => {
-        const [id, stock] = row.split(',');
-        acc[id] = parseInt(stock);
-        return acc;
-    }, {});
-    rows.forEach(row => {
-        const [id, stock] = row.split(',');
-        if (prevData[id] !== parseInt(stock)) {
-            diff.push(row);
-        }
+    const newHeaderIndexes = importantKeys.map(key => headers.indexOf(key));
+    const prevHeaderIndexes = importantKeys.map(key => prevHeaders.indexOf(key));
+    const newUpdateIndexes = updateTriggerKeys.map(key => headers.indexOf(key));
+    const prevUpdateIndexes = updateTriggerKeys.map(key => prevHeaders.indexOf(key));
+    rows.forEach((row) => {
+        let oldRowIndex = prevRows.findIndex(prevRow => prevHeaderIndexes.every((index, i) => prevRow[index] === row[newHeaderIndexes[i]]));
+        if (oldRowIndex === -1) {
+            diff.push(row.join(','));
+        } else {
+            const oldRow = prevRows[oldRowIndex];
+            let isDifferent = prevUpdateIndexes.some((key, i) => row[newUpdateIndexes[i]] !== oldRow[key]);
+            if (isDifferent) {
+                console.log({oldRow, row})
+                diff.push(row.join(','));
+            }
+            prevRows.splice(oldRowIndex, 1);
+        }   
     });
+    if (prevRows.length) {//if there are rows that are absent in new data
+        diff.push(...prevRows.map(row => {
+            row[prevUpdateIndexes[1]] = 0//set stock to 0
+            row.join(',')
+        }));
+    }
+    
     return diff;
 }
 
