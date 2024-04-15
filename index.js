@@ -37,6 +37,7 @@ app.get("/getFile", async (req, res) => {
   }
   try {
     const newData = await getNewData(url);
+    console.log("comparing started");
     diff = generateDiff(previousData, newData);
     // diff = newData[1][45];
     previousData = newData;
@@ -86,6 +87,7 @@ function generateDiff(previousData, newData) {
     }
   });
   if (prevRows.length) {
+    console.log(`deleted rows, 0 stock ${prevRows.length}`);
     //if there are rows that are absent in new data
     diff.push(
       ...prevRows.map((row) => {
@@ -103,7 +105,8 @@ app.get("/getDiff", (req, res) => {
   //send diff as csv
   const [headers] = previousData;
   const csv = `${headers.join(",")}\n${diff.join("\n")}`;
-
+  let now = new Date();
+  fs.writeFileSync(`diff${now.toLocaleString()}.csv`, csv);
   res.attachment("customers.csv").send(csv);
 });
 
