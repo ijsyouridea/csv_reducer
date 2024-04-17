@@ -43,8 +43,12 @@ app.get("/getFile", async (req, res) => {
     previousData = newData;
     //save new data to file
     const [headers, rows] = newData;
-    const csv = `${headers.join(",")}\n${rows.join("\n")}`;
+    const csv = `${headers.join(";")}\n${rows.join("\n")}`;
     fs.writeFileSync("data.csv", csv);
+    const diffcsv = `${headers.join(";")}\n${diff.join("\n")}`;
+    let now = new Date();
+    fs.writeFileSync(`diff${now.getTime()}.csv`, diffcsv);
+    fs.writeFileSync(`diff.csv`, diffcsv);
 
     res.send(`got new data, for update only ${diff.length} rows are different`);
   } catch (e) {
@@ -73,7 +77,7 @@ function generateDiff(previousData, newData) {
       )
     );
     if (oldRowIndex === -1) {
-      diff.push(row.join(","));
+      diff.push(row.join(";"));
     } else {
       const oldRow = prevRows[oldRowIndex];
       let isDifferent = prevUpdateIndexes.some(
@@ -81,7 +85,7 @@ function generateDiff(previousData, newData) {
       );
       if (isDifferent) {
         console.log({ oldRow, row });
-        diff.push(row.join(","));
+        diff.push(row.join(";"));
       }
       prevRows.splice(oldRowIndex, 1);
     }
@@ -92,22 +96,26 @@ function generateDiff(previousData, newData) {
     diff.push(
       ...prevRows.map((row) => {
         row[prevUpdateIndexes[1]] = 0; //set stock to 0
-        row.join(",");
+        row.join(";");
       })
     );
   }
 
   return diff;
 }
-
+//https://ca3121fb-02e8-45b6-b355-b46a2ee181e5-00-1mrhwgzmlqycl.spock.replit.dev/getDiff
 app.get("/getDiff", (req, res) => {
   //return csv with only different raws from previous call
   //send diff as csv
-  const [headers] = previousData;
-  const csv = `${headers.join(",")}\n${diff.join("\n")}`;
-  let now = new Date();
-  fs.writeFileSync(`diff${now.toLocaleString()}.csv`, csv);
-  res.attachment("customers.csv").send(csv);
+  fs.readFile("diff.csv", "utf8", (err, csv) => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    // const csv = data.split("\n");
+    // previousData = [csv[0].split(";"), csv.slice(1)];
+    res.attachment("data.csv").send(csv);
+  });
 });
 
 function getNewData(url) {
